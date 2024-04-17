@@ -1,7 +1,11 @@
 // gol
-/*
+/* Any live cell with fewer than two live neighbors dies, as if by underpopulation.
  *
+ * Any live cell with two or three live neighbors lives on to the next generation.
  *
+ * Any live cell with more than three live neighbors dies, as if by overpopulation.
+ *
+ * Any dead cell with exactly three live neighbors becomes a live cell, as if by reproduction.
  */
 
 package main
@@ -30,9 +34,17 @@ func initialModel() model {
 	}
 	return model{
 		grid:    grid,
-		cursorX: 0,
-		cursorY: 0,
+		cursorX: ROWS / 2,
+		cursorY: COLS / 2,
 	}
+}
+
+func in_bounds(i, j int) bool {
+	return i >= 0 && j >= 0 && i < ROWS && j < COLS
+}
+
+// Compute transitions (count neighbors and update)
+func gol_run(m model) {
 }
 
 func (m model) Init() tea.Cmd {
@@ -45,7 +57,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	// Is it a key press?
 	case tea.KeyMsg:
-
 		// Cool, what was the actual key pressed?
 		switch msg.String() {
 
@@ -56,38 +67,84 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "up", "k":
 			if m.cursorY > 0 {
 				m.cursorY--
+				m.grid[m.cursorX][m.cursorY] = 1
 			}
 
 		case "down", "j":
 			if m.cursorY < ROWS-1 {
 				m.cursorY++
+				m.grid[m.cursorX][m.cursorY] = 1
 			}
 
 		case "left", "h":
 			if m.cursorX > 0 {
 				m.cursorX--
+				m.grid[m.cursorX][m.cursorY] = 1
 			}
 
 		case "right", "l":
 			if m.cursorX < COLS-1 {
 				m.cursorX++
+				m.grid[m.cursorX][m.cursorY] = 1
 			}
 
-		// The "enter" key and the spacebar (a literal space) toggle
-		// the selected state for the item that the cursor is pointing at.
-		case "enter", " ":
+		// simulate
+		case "s":
+			for j := 0; j < COLS; j++ {
+				for i := 0; i < ROWS; i++ {
+					// count neighbors
+					neighbors := 0
+					if in_bounds(i-1, j-1) && m.grid[i-1][j-1] == 1 {
+						neighbors++
+					}
+					if in_bounds(i, j-1) && m.grid[i][j-1] == 1 {
+						neighbors++
+					}
+					if in_bounds(i+1, j-1) && m.grid[i+1][j-1] == 1 {
+						neighbors++
+					}
+					if in_bounds(i-1, j) && m.grid[i-1][j] == 1 {
+						neighbors++
+					}
+					if in_bounds(i+1, j) && m.grid[i+1][j] == 1 {
+						neighbors++
+					}
+					if in_bounds(i-1, j+1) && m.grid[i-1][j+1] == 1 {
+						neighbors++
+					}
+					if in_bounds(i, j+1) && m.grid[i][j+1] == 1 {
+						neighbors++
+					}
+					if in_bounds(i+1, j+1) && m.grid[i+1][j+1] == 1 {
+						neighbors++
+					}
+
+					// alive transition
+					if m.grid[i][j] == 1 {
+						if neighbors < 2 || neighbors > 3 {
+							m.grid[i][j] = 0
+						} else {
+							// live on
+						}
+						// dead transition
+					} else {
+						if neighbors == 3 {
+							m.grid[i][j] = 1
+						}
+					}
+				}
+			}
 
 		}
 	}
 
 	// Return the updated model to the Bubble Tea runtime for processing.
-	// Note that we're not returning a command.
 	return m, nil
 }
 
 func (m model) View() string {
 	// The header
-	s := "GOL\nMove the cursor to simulate life\n\n"
+	s := "GOL\nMove the cursor to add life, press s to simulate life\n\n"
 
 	for j := 0; j < COLS; j++ {
 		for i := 0; i < ROWS; i++ {
@@ -105,28 +162,6 @@ func (m model) View() string {
 		}
 		s += "\n"
 	}
-
-	// TODO controls for moving around and placing a new cell
-	/*
-		// Iterate over our choices
-		for i, choice := range m.choices {
-
-			// Is the cursor pointing at this choice?
-			cursor := " " // no cursor
-			if m.cursor == i {
-				cursor = ">" // cursor!
-			}
-
-			// Is this choice selected?
-			checked := " " // not selected
-			if _, ok := m.selected[i]; ok {
-				checked = "x" // selected!
-			}
-
-			// Render the row
-			s += fmt.Sprintf("%s [%s] %s\n", cursor, checked, choice)
-		}
-	*/
 
 	// The footer
 	s += "\nPress q to quit.\n"
